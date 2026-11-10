@@ -1,4 +1,444 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>The Adventures of Commander Hercules: POM-1 Simulation</title> <style> * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; } body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; color: #0f0; } #game-container { position: relative; width: 100%; height: 100%; max-width: 1024px; max-height: 768px; margin: 0 auto; background: radial-gradient(circle, #0c1020 0%, #020205 100%); overflow: hidden; border: 4px solid #333; } /* High-Res Cinematic Background Elements */ #space-bg { position: absolute; width:
-
-
-100%; height: 100%; pointer-events: none; } .star { position: absolute; background: #fff; border-radius: 50%; opacity: 0.8; } .nebula { position: absolute; width: 300px; height: 300px; border-radius: 50%; filter: blur(80px); opacity: 0.15; pointer-events: none; } .planet { position: absolute; bottom: -200px; left: 50%; transform: translateX(-50%); width: 800px; height: 800px; border-radius: 50%; background: radial-gradient(circle at 50% 0%, #1a3a5f 0%, #050a15 70%); box-shadow: 0 0 60px rgba(0, 150, 255, 0.4); display: none; transition: opacity 2s; } /* 3D-Look Playfield items */ .game-object { position: absolute; transform: translate(-50%, -50%); transition: width 0.1s, height 0.1s; } .asteroid { background: radial-gradient(circle at 30% 30%, #555, #222); border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; box-shadow: inset -5px -5px 15px rgba(0,0,0,0.8); } /* High-Res 3D Robot Gundams */ .gundam-enemy { background: linear-gradient(135deg, #666 0%, #333 50%, #111 100%); border-radius: 6px; border: 2px solid #900; box-shadow: 0 0 15px rgba(255, 0, 0, 0.5); } .gundam-enemy::before { content: ''; position: absolute; top: 15%; left: 20%; width: 60%; height: 20%; background: #ff0055; box-shadow: 0 0 8px #ff0055; border-radius: 2px; } .gundam-enemy::after { content: ''; position: absolute; bottom: -10px; left: 25%; width: 50%; height: 10px; background: cyan; opacity: 0.7; filter: blur(2px); } /* Boss Control Ship Components */ .boss-ship { background: linear-gradient(to bottom, #444, #151515); border: 4px solid #555; border-radius: 12px; box-shadow: 0 0 40px rgba(255,0,0,0.3); display: flex; justify-content: space-around; align-items: center; } .boss-weakpoint { width: 40px; height: 40px; background: radial-gradient(circle, #ff3300, #500); border: 2px solid #ff9900; border-radius: 50%; box-shadow: 0 0 15px #ff3300; cursor: pointer; position: relative; } .boss-weakpoint.destroyed { background: #222; border-color: #444; box-shadow: none; } /* Lasers & Effects */ .laser { position: absolute; background: #00ffff; box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff; border-radius: 2px; } .enemy-laser { position: absolute; background: #ff0055; box-shadow: 0 0 10px #ff0055; border-radius: 2px; } .sword-slash { position: absolute; top: 40%; left: 25%; width: 50%; height: 35%; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.8), transparent); transform: skewX(-30deg); display: none; box-shadow: 0 0 30px rgba(0,255,255,0.6); pointer-events: none; z-0: 10; } /* Squadmates Rendering */ .squad-wingman { background: linear-gradient(135deg, #aaa, #444); border: 2px solid #0f0; border-radius: 4px; opacity: 0.85; } .squad-wingman.momo { border-color: #ff00ff; } .squad-wingman.peach { border-color: #ff9900; } .squad-wingman.taro { border-color: #ffff00; } /* High-Res POM-1 Cockpit HUD */ #hud { position: absolute; width: 100%; height: 100%; pointer-events: none; border: 20px solid transparent; border-image: linear-gradient(to bottom, #111, #222) 20; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; z-index: 100; } .hud-row { display: flex; justify-content: space-between; width: 100%; } .hud-panel { background: rgba(5, 15, 5, 0.85); border: 2px solid #0f0; padding: 12px; border-radius: 4px; box-shadow: inset 0 0 15px rgba(0,255,0,0.2); pointer-events: auto; } /* Alerts */ #alert-banner { font-size: 24px; font-weight: bold; color: #ff0033; animation: pulse 0.5s infinite alternate; visibility: hidden; text-shadow: 0 0 10px #ff0033; } @keyframes pulse { from { opacity: 0.3; } to { opacity: 1; } } /* Progress bars */ .bar-container { width: 120px; height: 12px; background: #222; border: 1px solid #0f0; margin-top: 4px; border-radius: 2px; overflow: hidden; } .bar-fill { height: 100%; background: #0f0; width: 100%; transition: width 0.2s; } .health-low { background: #f00 !important; } /* Screen Overlays */ .overlay { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; z-index: 200; } .btn { margin-top: 20px; padding: 12px 30px; background: #0f0; color: #000; font-weight: bold; border: none; cursor: pointer; font-family: inherit; font-size: 16px; border-radius: 4px; } .btn:hover { background: #fff; } #victory-screen { display: none; background: radial-gradient(circle, #0a1c0a 0%, #000 100%); } #victory-quote { font-size: 24px; color: #fff; margin: 30px 0; font-style: italic; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255,255,255,0.6); } /* Crosshair */ #crosshair { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%); border: 2px solid rgba(0,255,255,0.4); border-radius: 50%; pointer-events: none; } #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(0,255,255,0.4); } #crosshair::before { top: 12px; left: -5px; width: 40px; height: 2px; } #crosshair::after { left: 12px; top: -5px; width: 2px; height: 40px; } </style> </head> <body> <div id="game-container"> <div id="space-bg"></div> <div id="planet-target" class="planet"></div> <div id="playfield" style="position:absolute; width:100%; height:100%;"></div> <div id="crosshair"></div> <div id="sword-fx" class="sword-slash"></div> <!-- HUD Layout --> <div id="hud"> <div class="hud-row"> <div class="hud-panel"> <div>SYSTEM: POM-1 COCKPIT</div> <div>PILOT: CMDR HERCULES</div> <div style="margin-top: 5px;">WEAPON MODE: <span id="hud-weapon" style="color: #0ffff0;">ENERGY LASER</span></div> <div style="font-size: 11px; color:#aaa; margin-top:2px;">[SHIFT] to swap / [SPACE] to fire</div> </div> <div id="alert-banner">WARNING: GREAT DANE APPROACHING</div> <div class="hud-panel" style="text-align: right;"> <div id="hud-level">STAGE 1: ASTEROID FIELD</div> <div>SHIELD INTEGRITY</div> <div class="bar-container" style="margin-left: auto;"><div id="player-shield" class="bar-fill" style="background:#0ffff0;"></div></div> </div> </div> <div class="hud-row" style="align-items: flex-end;"> <div class="hud-panel"> <div style="border-bottom: 1px solid #0f0; margin-bottom: 5px; font-weight:bold;">SQUAD STATUS</div> <div>MOMO <span class="bar-container" style="display:inline-block; vertical-align:middle;"><div id="hp-momo" class="bar-fill"></div></span></div> <div>PEACH <span class="bar-container" style="display:inline-block; vertical-align:middle;"><div id="hp-peach" class="bar-fill"></div></span></div> <div>TARO <span class="bar-container" style="display:inline-block; vertical-align:middle;"><div id="hp-taro" class="bar-fill"></div></span></div> </div> <div class="hud-panel" style="min-width: 180px;"> <div style="border-bottom: 1px solid #0f0; margin-bottom: 5px; font-weight:bold;">CONFIRMED KILLS</div> <div>HERCULES: <span id="score-hercules" style="color:#fff;">0</span></div> <div>MOMO: <span id="score-momo">0</span></div> <div>PEACH: <span id="score-peach">0</span></div> <div>TARO: <span id="score-taro">0</span></div> </div> </div> </div> <!-- Start Overlay --> <div id="start-screen" class="overlay"> <h1 style="color: #0ffff0; font-size: 28px; margin-bottom: 10px;">THE ADVENTURES OF COMMANDER HERCULES</h1> <p style="color: #aaa; margin-bottom: 20px;">Deploy the POM-1 Squadron. Defeat the Great Dane Gundam fleet.</p> <div style="text-align: left; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; border: 1px solid #333;"> <strong>CONTROLS:</strong><br> • <strong>[ SHIFT ]</strong> Toggles weapon between Laser / Energy Sword<br> • <strong>[ SPACEBAR ]</strong> Fire Laser (5/sec) or Swing Energy Sword<br> • <strong>[ MOUSE ]</strong> Move crosshair to aim at targets </div> <button class="btn" onclick="startGame()">INITIALIZE LAUNCH</button> </div> <!-- Victory Overlay --> <div id="victory-screen" class="overlay"> <h1 style="color: #0f0; font-size: 32px;">MISSION COMPLETE</h1> <p style="color: #aaa; margin-top: 10px;">The Great Dane Control Ship has been entirely neutralized.</p> <p id="victory-quote">"To the team. To victory. To Pomeranians everywhere."</p> <button class="btn" onclick="location.reload()">RE-RUN SIMULATION<
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Adventures of Commander Hercules: POM-1 Simulation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+      }
+      body,
+      html {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: "Courier New", Courier, monospace;
+        color: #0f0;
+      }
+      #game-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        max-width: 1024px;
+        max-height: 768px;
+        margin: 0 auto;
+        background: radial-gradient(circle, #0c1020 0%, #020205 100%);
+        overflow: hidden;
+        border: 4px solid #333;
+      } /* High-Res Cinematic Background Elements */
+      #space-bg {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .star {
+        position: absolute;
+        background: #fff;
+        border-radius: 50%;
+        opacity: 0.8;
+      }
+      .nebula {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        filter: blur(80px);
+        opacity: 0.15;
+        pointer-events: none;
+      }
+      .planet {
+        position: absolute;
+        bottom: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 800px;
+        height: 800px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 0%, #1a3a5f 0%, #050a15 70%);
+        box-shadow: 0 0 60px rgba(0, 150, 255, 0.4);
+        display: none;
+        transition: opacity 2s;
+      } /* 3D-Look Playfield items */
+      .game-object {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        transition:
+          width 0.1s,
+          height 0.1s;
+      }
+      .asteroid {
+        background: radial-gradient(circle at 30% 30%, #555, #222);
+        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+        box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.8);
+      } /* High-Res 3D Robot Gundams */
+      .gundam-enemy {
+        background: linear-gradient(135deg, #666 0%, #333 50%, #111 100%);
+        border-radius: 6px;
+        border: 2px solid #900;
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+      }
+      .gundam-enemy::before {
+        content: "";
+        position: absolute;
+        top: 15%;
+        left: 20%;
+        width: 60%;
+        height: 20%;
+        background: #ff0055;
+        box-shadow: 0 0 8px #ff0055;
+        border-radius: 2px;
+      }
+      .gundam-enemy::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        left: 25%;
+        width: 50%;
+        height: 10px;
+        background: cyan;
+        opacity: 0.7;
+        filter: blur(2px);
+      } /* Boss Control Ship Components */
+      .boss-ship {
+        background: linear-gradient(to bottom, #444, #151515);
+        border: 4px solid #555;
+        border-radius: 12px;
+        box-shadow: 0 0 40px rgba(255, 0, 0, 0.3);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+      }
+      .boss-weakpoint {
+        width: 40px;
+        height: 40px;
+        background: radial-gradient(circle, #ff3300, #500);
+        border: 2px solid #ff9900;
+        border-radius: 50%;
+        box-shadow: 0 0 15px #ff3300;
+        cursor: pointer;
+        position: relative;
+      }
+      .boss-weakpoint.destroyed {
+        background: #222;
+        border-color: #444;
+        box-shadow: none;
+      } /* Lasers & Effects */
+      .laser {
+        position: absolute;
+        background: #00ffff;
+        box-shadow:
+          0 0 10px #00ffff,
+          0 0 20px #00ffff;
+        border-radius: 2px;
+      }
+      .enemy-laser {
+        position: absolute;
+        background: #ff0055;
+        box-shadow: 0 0 10px #ff0055;
+        border-radius: 2px;
+      }
+      .sword-slash {
+        position: absolute;
+        top: 40%;
+        left: 25%;
+        width: 50%;
+        height: 35%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 255, 255, 0.8),
+          transparent
+        );
+        transform: skewX(-30deg);
+        display: none;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        pointer-events: none;
+        z-index: 10;
+      } /* Squadmates Rendering */
+      .squad-wingman {
+        background: linear-gradient(135deg, #aaa, #444);
+        border: 2px solid #0f0;
+        border-radius: 4px;
+        opacity: 0.85;
+      }
+      .squad-wingman.momo {
+        border-color: #ff00ff;
+      }
+      .squad-wingman.peach {
+        border-color: #ff9900;
+      }
+      .squad-wingman.taro {
+        border-color: #ffff00;
+      } /* High-Res POM-1 Cockpit HUD */
+      #hud {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        border: 20px solid transparent;
+        border-image: linear-gradient(to bottom, #111, #222) 20;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 20px;
+        z-index: 100;
+      }
+      .hud-row {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .hud-panel {
+        background: rgba(5, 15, 5, 0.85);
+        border: 2px solid #0f0;
+        padding: 12px;
+        border-radius: 4px;
+        box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.2);
+        pointer-events: auto;
+      } /* Alerts */
+      #alert-banner {
+        font-size: 24px;
+        font-weight: bold;
+        color: #ff0033;
+        animation: pulse 0.5s infinite alternate;
+        visibility: hidden;
+        text-shadow: 0 0 10px #ff0033;
+      }
+      @keyframes pulse {
+        from {
+          opacity: 0.3;
+        }
+        to {
+          opacity: 1;
+        }
+      } /* Progress bars */
+      .bar-container {
+        width: 120px;
+        height: 12px;
+        background: #222;
+        border: 1px solid #0f0;
+        margin-top: 4px;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        background: #0f0;
+        width: 100%;
+        transition: width 0.2s;
+      }
+      .health-low {
+        background: #f00 !important;
+      } /* Screen Overlays */
+      .overlay {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 40px;
+        z-index: 200;
+      }
+      .btn {
+        margin-top: 20px;
+        padding: 12px 30px;
+        background: #0f0;
+        color: #000;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 16px;
+        border-radius: 4px;
+      }
+      .btn:hover {
+        background: #fff;
+      }
+      #victory-screen {
+        display: none;
+        background: radial-gradient(circle, #0a1c0a 0%, #000 100%);
+      }
+      #victory-quote {
+        font-size: 24px;
+        color: #fff;
+        margin: 30px 0;
+        font-style: italic;
+        letter-spacing: 2px;
+        text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+      } /* Crosshair */
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 30px;
+        height: 30px;
+        transform: translate(-50%, -50%);
+        border: 2px solid rgba(0, 255, 255, 0.4);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      #crosshair::before,
+      #crosshair::after {
+        content: "";
+        position: absolute;
+        background: rgba(0, 255, 255, 0.4);
+      }
+      #crosshair::before {
+        top: 12px;
+        left: -5px;
+        width: 40px;
+        height: 2px;
+      }
+      #crosshair::after {
+        left: 12px;
+        top: -5px;
+        width: 2px;
+        height: 40px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="space-bg"></div>
+      <div id="planet-target" class="planet"></div>
+      <div
+        id="playfield"
+        style="position: absolute; width: 100%; height: 100%"
+      ></div>
+      <div id="crosshair"></div>
+      <div id="sword-fx" class="sword-slash"></div>
+      <!-- HUD Layout -->
+      <div id="hud">
+        <div class="hud-row">
+          <div class="hud-panel">
+            <div>SYSTEM: POM-1 COCKPIT</div>
+            <div>PILOT: CMDR HERCULES</div>
+            <div style="margin-top: 5px">
+              WEAPON MODE:
+              <span id="hud-weapon" style="color: #0ffff0">ENERGY LASER</span>
+            </div>
+            <div style="font-size: 11px; color: #aaa; margin-top: 2px">
+              [SHIFT] to swap / [SPACE] to fire
+            </div>
+          </div>
+          <div id="alert-banner">WARNING: GREAT DANE APPROACHING</div>
+          <div class="hud-panel" style="text-align: right">
+            <div id="hud-level">STAGE 1: ASTEROID FIELD</div>
+            <div>SHIELD INTEGRITY</div>
+            <div class="bar-container" style="margin-left: auto">
+              <div
+                id="player-shield"
+                class="bar-fill"
+                style="background: #0ffff0"
+              ></div>
+            </div>
+          </div>
+        </div>
+        <div class="hud-row" style="align-items: flex-end">
+          <div class="hud-panel">
+            <div
+              style="
+                border-bottom: 1px solid #0f0;
+                margin-bottom: 5px;
+                font-weight: bold;
+              "
+            >
+              SQUAD STATUS
+            </div>
+            <div>
+              MOMO
+              <span
+                class="bar-container"
+                style="display: inline-block; vertical-align: middle"
+                ><div id="hp-momo" class="bar-fill"></div
+              ></span>
+            </div>
+            <div>
+              PEACH
+              <span
+                class="bar-container"
+                style="display: inline-block; vertical-align: middle"
+                ><div id="hp-peach" class="bar-fill"></div
+              ></span>
+            </div>
+            <div>
+              TARO
+              <span
+                class="bar-container"
+                style="display: inline-block; vertical-align: middle"
+                ><div id="hp-taro" class="bar-fill"></div
+              ></span>
+            </div>
+          </div>
+          <div class="hud-panel" style="min-width: 180px">
+            <div
+              style="
+                border-bottom: 1px solid #0f0;
+                margin-bottom: 5px;
+                font-weight: bold;
+              "
+            >
+              CONFIRMED KILLS
+            </div>
+            <div>
+              HERCULES: <span id="score-hercules" style="color: #fff">0</span>
+            </div>
+            <div>MOMO: <span id="score-momo">0</span></div>
+            <div>PEACH: <span id="score-peach">0</span></div>
+            <div>TARO: <span id="score-taro">0</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Start Overlay -->
+      <div id="start-screen" class="overlay">
+        <h1 style="color: #0ffff0; font-size: 28px; margin-bottom: 10px">
+          THE ADVENTURES OF COMMANDER HERCULES
+        </h1>
+        <p style="color: #aaa; margin-bottom: 20px">
+          Deploy the POM-1 Squadron. Defeat the Great Dane Gundam fleet.
+        </p>
+        <div
+          style="
+            text-align: left;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #333;
+          "
+        >
+          <strong>CONTROLS:</strong><br />
+          • <strong>[ SHIFT ]</strong> Toggles weapon between Laser / Energy
+          Sword<br />
+          • <strong>[ SPACEBAR ]</strong> Fire Laser (5/sec) or Swing Energy
+          Sword<br />
+          • <strong>[ MOUSE ]</strong> Move crosshair to aim at targets
+        </div>
+        <button class="btn" onclick="startGame()">INITIALIZE LAUNCH</button>
+      </div>
+      <!-- Victory Overlay -->
+      <div id="victory-screen" class="overlay">
+        <h1 style="color: #0f0; font-size: 32px">MISSION COMPLETE</h1>
+        <p style="color: #aaa; margin-top: 10px">
+          The Great Dane Control Ship has been entirely neutralized.
+        </p>
+        <p id="victory-quote">
+          "To the team. To victory. To Pomeranians everywhere."
+        </p>
+        <button class="btn" onclick="location.reload()">
+          RE-RUN SIMULATION
+        </button>
+      </div>
+    </div>
+    <script src="game.js"></script>
+  </body>
+</html>
